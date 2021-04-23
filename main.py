@@ -58,21 +58,17 @@ def Eat(_, msg):
 # .work [к-во запусков]
 @app.on_message(filters.command("work", prefixes=".") & filters.me)
 def Work(_, msg):
-    start = True
-
     try:
         max = int(msg.text.split(".work ", maxsplit=1)[1])
         if max > 10 and max < 1:
-            start = False
             app.send_message("me", "num can't be > 50 and < 0")
     except:
         app.send_message("me", "Введи еще число")
-        start = False
 
     count = 0
     msg.delete()
-    while (start):
-        if (count == max):
+    while (True):
+        if (count < max):
             break
         msg.reply_text("Завершить работу")
         msg.reply_text("Реанимировать жабу")
@@ -155,7 +151,6 @@ def echo(_, msg):
     while (max != count):
         msg.reply_text(orig_text)
         count += 1
-
 
 app.run()
 
