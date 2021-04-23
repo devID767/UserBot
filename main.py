@@ -6,19 +6,16 @@ import random
 
 app = Client("my_account")
 
-@app.on_message(filters.text & filters.reply & filters.me)
+@app.on_message(filters.text & filters.reply & filters.me & filters.command("duel", prefixes="."))
 def StartDuel(client, message):
-    orig_text = message.text.split(" ", maxsplit=1)[0]
-    max = message.text.split(" ", maxsplit=1)[1]
-    if orig_text.lower() == "дуэль":
-        Oldmessage = app.get_messages(message.chat.id, reply_to_message_ids=message.message_id)
-        count = 0
-        max = 10
-        while(count != max):
-            message.reply_text("Реанимировать жабу", quote=False)
-            message.reply_text("дуэль", reply_to_message_id = Oldmessage.message_id)
-            sleep(15)  # 43200
-            count += 1
+    Oldmessage = app.get_messages(message.chat.id, reply_to_message_ids=message.message_id)
+    max = int(message.text.split(".duel", maxsplit=1)[1])
+    count = 0
+    while(count < max):
+        message.reply_text("Реанимировать жабу", quote=False)
+        message.reply_text("дуэль", reply_to_message_id = Oldmessage.message_id)
+        sleep(15)  # 43200
+        count += 1
 
 
 @app.on_message(filters.command("delete", prefixes=".") & filters.me)
