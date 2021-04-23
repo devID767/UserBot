@@ -10,8 +10,6 @@ app = Client("my_account")
 def StartDuel(client, message):
     orig_text = message.text.split(" ", maxsplit=1)[0]
     max = message.text.split(" ", maxsplit=1)[1]
-    message.reply_text(orig_text)
-    message.reply_text(max)
     if orig_text.lower() == "дуэль":
         Oldmessage = app.get_messages(message.chat.id, reply_to_message_ids=message.message_id)
         count = 0
