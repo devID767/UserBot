@@ -6,14 +6,21 @@ import random
 
 app = Client("my_account")
 
-@app.on_message(filters.text & filters.reply)
+@app.on_message(filters.text & filters.reply & filters.me)
 def StartDuel(client, message):
-    if message.text.lower() == "дуэль принять":
+    orig_text = message.text.split(" ", maxsplit=1)[0]
+    max = message.text.split(" ", maxsplit=1)[1]
+    message.reply_text(orig_text)
+    message.reply_text(max)
+    if orig_text.lower() == "дуэль":
         Oldmessage = app.get_messages(message.chat.id, reply_to_message_ids=message.message_id)
-        if Oldmessage.from_user.is_self:
-            sleep(15)  # 43200
+        count = 0
+        max = 10
+        while(count != max):
             message.reply_text("Реанимировать жабу", quote=False)
-            message.reply_text("дуэль", quote=True)
+            message.reply_text("дуэль", reply_to_message_id = Oldmessage.message_id)
+            sleep(15)  # 43200
+            count += 1
 
 
 @app.on_message(filters.command("delete", prefixes=".") & filters.me)
