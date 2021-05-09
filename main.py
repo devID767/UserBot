@@ -6,17 +6,31 @@ import random
 
 app = Client("my_account")
 
-@app.on_message(filters.text & filters.reply & filters.me & filters.command("duel", prefixes="."))
-def StartDuel(client, message):
-    Oldmessage = app.get_messages(message.chat.id, reply_to_message_ids=message.message_id)
-    max = int(message.text.split(".duel", maxsplit=1)[1])
-    count = 0
-    while(count < max):
-        message.reply_text("Реанимировать жабу", quote=False)
-        message.reply_text("дуэль", reply_to_message_id = Oldmessage.message_id)
-        sleep(15)  # 43200
-        count += 1
+IsWorking = False
+IsEating = False
+IsDueling = False
 
+@app.on_message(filters.text & filters.me & filters.command("help", prefixes="."))
+def Help(client, message):
+    message.delete()
+    message.reply_text(".status\n"
+                       ".delete [message]\n"
+                       ".eat [start/stop]\n"
+                       ".work [start/delete]\n"
+                       ".duel [start/delete]\n"
+                       ".type [message]\n"
+                       ".ass\n"
+                       ".pidor\n"
+                       ".echo [num] [message]\n\n"
+                       "Also can duel, eat and work")
+
+
+@app.on_message(filters.text & filters.me & filters.command("status", prefixes="."))
+def Status(client, message):
+    message.delete()
+    message.reply_text(f"IsWorking = {IsWorking}\n"
+                       f"IsEating = {IsEating}\n"
+                       f"IsDueling = {IsDueling}")
 
 @app.on_message(filters.command("delete", prefixes=".") & filters.me)
 def DeleteMessages(client, message):
@@ -27,57 +41,48 @@ def DeleteMessages(client, message):
             app.delete_messages(message.chat.id, msg.message_id, True)
 
 
-# Покормить жабу
-# .eat [к-во запусков]
-
 @app.on_message(filters.command("eat", prefixes=".") & filters.me)
-def Eat(_, msg):
-    start = True
+def EatCommand(client, message):
+    command = message.text.split(".eat ", maxsplit=1)[1]
+    message.delete()
+    global IsEating
+    if command == "start":
+        IsEating = True
+        message.reply_text("Eat started")
+    elif command == "stop":
+        IsEating = False
+        message.reply_text("Eat stopped")
+    else:
+        message.reply_text("Error")
 
-    try:
-        max = int(msg.text.split(".eat ", maxsplit=1)[1])
-        if max > 10 and max < 1:
-            start = False
-            app.send_message("me", "num can't be > 50 and < 0")
-    except:
-        app.send_message("me", "Введи еще число")
-        start = False
-
-    msg.delete()
-    count = 0
-    while (start):
-        if count == max:
-            break
-        msg.reply_text("Откормить жабу")
-        sleep(14410)  # 43200
-
-        count += 1
-
-
-# Отправить жабу на работу
-# .work [к-во запусков]
 @app.on_message(filters.command("work", prefixes=".") & filters.me)
-def Work(_, msg):
-    try:
-        max = int(msg.text.split(".work ", maxsplit=1)[1])
-        if max > 10 and max < 1:
-            app.send_message("me", "num can't be > 50 and < 0")
-    except:
-        app.send_message("me", "Введи еще число")
+def WorkCommand(client, message):
+    command = message.text.split(".work ", maxsplit=1)[1]
+    message.delete()
+    global IsWorking
+    if command == "start":
+        IsWorking = True
+        message.reply_text("Work started")
+    elif command == "stop":
+        IsWorking = False
+        message.reply_text("Work stopped")
+    else:
+        message.reply_text("Error")
 
-    count = 0
-    msg.delete()
-    while (True):
-        if (count < max):
-            break
-        msg.reply_text("Завершить работу")
-        msg.reply_text("Реанимировать жабу")
-        msg.reply_text("Работа грабитель")
-        # кд до след работы
-        sleep(28820)  # 21600
 
-        count += 1
-
+@app.on_message(filters.command("duel", prefixes=".") & filters.me)
+def DuelCommand(client, message):
+    command = message.text.split(".duel ", maxsplit=1)[1]
+    message.delete()
+    global IsDueling
+    if command == "start":
+        IsDueling = True
+        message.reply_text("Duel started")
+    elif command == "stop":
+        IsDueling = False
+        message.reply_text("Duel stopped")
+    else:
+        message.reply_text("Error")
 
 @app.on_message(filters.command("type", prefixes=".") & filters.me)
 def type(_, msg):
@@ -101,7 +106,7 @@ def type(_, msg):
 
 
 @app.on_message(filters.command("ass", prefixes=".") & filters.me)
-def hack(_, msg):
+def ass(_, msg):
     perc = 0
 
     while (perc < 100):
@@ -141,16 +146,41 @@ def FindPidoras(_, message):
     message.edit(f"Пидором является: @{pidorUserName}")
 
 
-@app.on_message(filters.command("reply", prefixes=".") & filters.me)
+@app.on_message(filters.command("echo", prefixes=".") & filters.me)
 def echo(_, msg):
     count = 0
     orig_text = msg.text.split(maxsplit=2)[2]
     max = int(msg.text.split(maxsplit=2)[1])
 
     msg.delete()
-    while (max != count):
+    while (max != count & max <= 100):
         msg.reply_text(orig_text)
         count += 1
+
+@app.on_message(filters.text & filters.reply)
+def StartDuel(client, message):
+    if message.text.lower() == "дуэль принять":
+        Oldmessage = app.get_messages(message.chat.id, reply_to_message_ids=message.message_id)
+        if Oldmessage.from_user.is_self and IsDueling:
+            sleep(15)
+            message.reply_text("Реанимировать жабу", quote=False)
+            message.reply_text("дуэль", quote=True)
+
+
+@app.on_message(filters.text & filters.me)
+def StartCommand(client, message):
+    if IsWorking and message.text == "Поход в столовую":
+        message.reply_text("запущенно")
+        sleep(7210)  # 7200
+        message.reply_text("Завершить работу")
+        sleep(21610)  # 21600
+        message.reply_text("Выйти из подземелья")
+        message.reply_text("Реанимировать жабу")
+        message.reply_text("Поход в столовую")
+    elif IsEating and message.text == "Откормить жабу":
+        message.reply_text("Откормить жабу")
+        sleep(14410)  #14400
+        message.reply_text("Откормить жабу")
 
 app.run()
 
