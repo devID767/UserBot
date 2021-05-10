@@ -2,18 +2,24 @@ from pyrogram import Client, filters
 from pyrogram.errors import FloodWait
 
 from time import sleep
+
 import random
 
 app = Client("my_account")
 
-IsWorking = False
+CanEat = False
+CanWork = False
+CanDuel = False
+
 IsEating = False
-IsDueling = False
+IsWorking = False
+
 
 @app.on_message(filters.text & filters.me & filters.command("help", prefixes="."))
 def Help(client, message):
     message.delete()
     message.reply_text(".status\n"
+                       ".settings\n"
                        ".delete [message]\n"
                        ".eat [start/stop]\n"
                        ".work [start/delete]\n"
@@ -26,11 +32,19 @@ def Help(client, message):
 
 
 @app.on_message(filters.text & filters.me & filters.command("status", prefixes="."))
-def Status(client, message):
+def ShowStatus(client, message):
     message.delete()
-    message.reply_text(f"IsWorking = {IsWorking}\n"
-                       f"IsEating = {IsEating}\n"
-                       f"IsDueling = {IsDueling}")
+    message.reply_text(f"IsEating = {IsEating}\n"
+                       f"IsWorking = {IsWorking}")
+
+
+@app.on_message(filters.text & filters.me & filters.command("settings", prefixes="."))
+def Settings(client, message):
+    message.delete()
+    message.reply_text(f"CanEat = {CanEat}\n"
+                       f"CanWork = {CanWork}\n"
+                       f"CanDuel = {CanDuel}")
+
 
 @app.on_message(filters.command("delete", prefixes=".") & filters.me)
 def DeleteMessages(client, message):
@@ -45,44 +59,92 @@ def DeleteMessages(client, message):
 def EatCommand(client, message):
     command = message.text.split(".eat ", maxsplit=1)[1]
     message.delete()
+
+    global CanEat
     global IsEating
-    if command == "start":
-        IsEating = True
-        message.reply_text("Eat started")
+
+    if command == "on":
+        CanEat = True
+        message.reply_text("Eat on")
+    elif command.lower() == "покормить жабу" or command.lower() == "откормить жабу":
+        Eating(message, command)
     elif command == "stop":
+        CanEat = False
         IsEating = False
         message.reply_text("Eat stopped")
     else:
-        message.reply_text("Error")
+        message.reply_text("Error or incorrect eat")
+
+
+def Eating(message, eat):
+    global IsEating
+
+    if not IsEating:
+        IsEating = True
+        while CanEat and IsEating:
+            message.reply_text(eat, quote=False)
+            sleep(5)  # 14400
+        message.reply_text("Кормка завершена", quote=False)
+        IsEating = False
+    else:
+        message.reply_text("Eating already started", qoute=False)
+
 
 @app.on_message(filters.command("work", prefixes=".") & filters.me)
 def WorkCommand(client, message):
     command = message.text.split(".work ", maxsplit=1)[1]
     message.delete()
+
+    global CanWork
     global IsWorking
-    if command == "start":
-        IsWorking = True
-        message.reply_text("Work started")
+
+    if command == "on":
+        CanWork = True
+        message.reply_text("Work on")
+    elif command.lower() == "поход в столовую" or command.lower() == "работа крупье" or command.lower() == "работа грабитель":
+        Working(message, command)
     elif command == "stop":
+        CanWork = False
         IsWorking = False
         message.reply_text("Work stopped")
     else:
-        message.reply_text("Error")
+        message.reply_text("Error or incorrect name of work")
+
+
+def Working(message, work):
+    global IsWorking
+
+    if not IsWorking:
+        IsWorking = True
+        while CanWork and IsWorking:
+            message.reply_text("Выйти из подземелья", quote=False)
+            message.reply_text("Реанимировать жабу", quote=False)
+            message.reply_text(work, quote=False)
+            sleep(5)  # 7200
+            if not IsWorking:
+                break
+            message.reply_text("Завершить работу", quote=False)
+            sleep(10)  # 21600
+        message.reply_text("Работа завершена", quote=False)
+        IsWorking = False
+    else:
+        message.reply_text("Working already started")
 
 
 @app.on_message(filters.command("duel", prefixes=".") & filters.me)
 def DuelCommand(client, message):
     command = message.text.split(".duel ", maxsplit=1)[1]
     message.delete()
-    global IsDueling
+    global CanDuel
     if command == "start":
-        IsDueling = True
+        CanDuel = True
         message.reply_text("Duel started")
     elif command == "stop":
-        IsDueling = False
+        CanDuel = False
         message.reply_text("Duel stopped")
     else:
         message.reply_text("Error")
+
 
 @app.on_message(filters.command("type", prefixes=".") & filters.me)
 def type(_, msg):
@@ -114,7 +176,7 @@ def ass(_, msg):
             text = "Взлом жопы в процессе ..." + str(perc) + "%"
             msg.edit(text)
 
-            perc += random.randint(1, 3)
+            perc += random.randint(3, 5)
             sleep(0.1);
 
         except FloodWait as e:
@@ -124,7 +186,7 @@ def ass(_, msg):
 
 
 @app.on_message(filters.command("pidor", prefixes=".") & filters.me)
-def FindPidoras(_, message):
+def FindPidor(_, message):
     members = app.get_chat_members(message.chat.id)
     indexOfPidor = random.randrange(0, len(members), 1)
     pidorUser = members[indexOfPidor].user
@@ -157,30 +219,15 @@ def echo(_, msg):
         msg.reply_text(orig_text)
         count += 1
 
+
 @app.on_message(filters.text & filters.reply)
-def StartDuel(client, message):
+def Duel(client, message):
     if message.text.lower() == "дуэль принять":
         Oldmessage = app.get_messages(message.chat.id, reply_to_message_ids=message.message_id)
-        if Oldmessage.from_user.is_self and IsDueling:
+        if Oldmessage.from_user.is_self and CanDuel:
             sleep(15)
             message.reply_text("Реанимировать жабу", quote=False)
             message.reply_text("дуэль", quote=True)
 
 
-@app.on_message(filters.text & filters.me)
-def StartCommand(client, message):
-    if IsWorking and message.text == "Поход в столовую":
-        message.reply_text("запущенно")
-        sleep(7210)  # 7200
-        message.reply_text("Завершить работу")
-        sleep(21610)  # 21600
-        message.reply_text("Выйти из подземелья")
-        message.reply_text("Реанимировать жабу")
-        message.reply_text("Поход в столовую")
-    elif IsEating and message.text == "Откормить жабу":
-        message.reply_text("Откормить жабу")
-        sleep(14410)  #14400
-        message.reply_text("Откормить жабу")
-
 app.run()
-
