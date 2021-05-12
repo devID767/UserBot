@@ -55,12 +55,6 @@ def GetFromBase(_chat_id):
         sql_select_query = """select * from groups where id = ?"""
         cursor.execute(sql_select_query, (_chat_id,))
         records = cursor.fetchone()
-        #if records is not None:
-        #    print("ID:", records[0])
-        #    print("IsEating:", records[1])
-        #    print("IsWorking:", records[2])
-        #else:
-        #    print("None")
 
         cursor.close()
     except sqlite3.Error as error:
@@ -68,8 +62,7 @@ def GetFromBase(_chat_id):
     finally:
         if conn:
             conn.close()
-
-    return records
+        return records
 
 def isEating(message):
     if GetFromBase(message.chat.id) is None:
@@ -99,7 +92,6 @@ def Help(client, message):
                        ".eat [on/name of command/stop/off]\n"
                        ".work [on/name of command/stop/off]\n"
                        ".duel [start/delete]\n"
-                       ".type [message]\n"
                        ".echo [num] [message]\n"
                        ".convert [kits] [lvl]\n"
                        "\nAlso can duel, eat and work")
@@ -148,7 +140,7 @@ def EatCommand(client, message):
         CanEat = False
         message.reply_text("Eat off")
     else:
-        message.reply_text("Error or incorrect eat")
+        message.reply_text("Unknown command")
 
 def Eating(message, eat):
     IsEating = isEating(message)
@@ -163,8 +155,10 @@ def Eating(message, eat):
             else:
                 sleep(43210) #43200
         message.reply_text("Кормка завершена", quote=False)
+        IsEating = False
+        InsertToBase(message.chat.id, IsEating, isWorking(message))
     else:
-        message.reply_text("Eating already started")
+        message.reply_text("Is Eating")
 
 
 @app.on_message(filters.command("work", prefixes=".") & filters.me)
@@ -173,7 +167,6 @@ def WorkCommand(client, message):
     message.delete()
 
     global CanWork
-    IsWorking = isWorking(message)
 
     if command == "on":
         CanWork = True
@@ -188,7 +181,7 @@ def WorkCommand(client, message):
         CanWork = False
         message.reply_text("Work off")
     else:
-        message.reply_text("Error or incorrect name of work")
+        message.reply_text("Unknown command")
 
 
 def Working(message, work):
@@ -207,8 +200,10 @@ def Working(message, work):
             message.reply_text("Завершить работу", quote=False)
             sleep(21610)  # 21600
         message.reply_text("Работа завершена", quote=False)
+        IsWorking = False
+        InsertToBase(message.chat.id, isEating(message), IsWorking)
     else:
-        message.reply_text("Working already started")
+        message.reply_text("Is Working")
 
 
 @app.on_message(filters.command("duel", prefixes=".") & filters.me)
@@ -223,69 +218,16 @@ def DuelCommand(client, message):
         CanDuel = False
         message.reply_text("Duel stopped")
     else:
-        message.reply_text("Error")
+        message.reply_text("Unknown command")
 
-
-@app.on_message(filters.command("type", prefixes=".") & filters.me)
-def type(_, msg):
-    orig_text = msg.text.split(".type ", maxsplit=1)[1]
-    text = orig_text
-    tbp = ""
-    typing_symbol = "#"
-
-    while (tbp != orig_text):
-        try:
-            msg.edit(tbp + typing_symbol)
-            sleep(0.1)
-            tbp = tbp + text[0]
-            text = text[1:]
-
-            msg.edit(tbp)
-            sleep(0.1)
-
-        except FloodWait as e:
-            sleep(e.x)
-
-
-#@app.on_message(filters.command("ass", prefixes=".") & filters.me)
-#def ass(_, msg):
-#    perc = 0
-#
-#    while (perc < 100):
-#        try:
-#            text = "Взлом жопы в процессе ..." + str(perc) + "%"
-#            msg.edit(text)
-#
-#            perc += random.randint(3, 5)
-#            sleep(0.1);
-#
-#        except FloodWait as e:
-#            sleep(e.x)
-#
-#    msg.edit("Жопа успешно взломана!")
-
-
-#@app.on_message(filters.command("pidor", prefixes=".") & filters.me)
-#def FindPidor(_, message):
-#    members = app.get_chat_members(message.chat.id)
-#    indexOfPidor = random.randrange(0, len(members), 1)
-#    pidorUser = members[indexOfPidor].user
-#    pidorUserName = pidorUser.username
-#
-#    perc = 0
-#
-#    while (perc < 100):
-#        try:
-#            text = "Ищу пидора ..." + str(perc) + "%"
-#            message.edit(text)
-#
-#            perc += random.randint(3, 6)
-#            sleep(0.1);
-#
-#        except FloodWait as e:
-#            sleep(e.x)
-#
-#    message.edit(f"Пидором является: @{pidorUserName}")
+@app.on_message(filters.text & filters.reply)
+def Duel(client, message):
+    if message.text.lower() == "дуэль принять":
+        Oldmessage = app.get_messages(message.chat.id, reply_to_message_ids=message.message_id)
+        if Oldmessage.from_user.is_self and CanDuel:
+            sleep(10)
+            message.reply_text("Реанимировать жабу", quote=False)
+            message.reply_text("дуэль", quote=True)
 
 
 @app.on_message(filters.command("echo", prefixes=".") & filters.me)
@@ -300,39 +242,29 @@ def echo(_, msg):
         count += 1
 
 
-@app.on_message(filters.text & filters.reply)
-def Duel(client, message):
-    if message.text.lower() == "дуэль принять":
-        Oldmessage = app.get_messages(message.chat.id, reply_to_message_ids=message.message_id)
-        if Oldmessage.from_user.is_self and CanDuel:
-            sleep(10)
-            message.reply_text("Реанимировать жабу", quote=False)
-            message.reply_text("дуэль", quote=True)
-
-
 @app.on_message(filters.text & filters.me & filters.command("convert", prefixes="."))
 def Convert(client, message):
-    aptek = int(message.text.split(maxsplit=2)[1])
+    kit = int(message.text.split(maxsplit=2)[1])
     lvl = int(message.text.split(maxsplit=2)[2])
 
     message.delete()
-    message.reply_text(f"{aptek} аптечек даст тебе {str(ConvertMethod(aptek, lvl))} уровней")
+    message.reply_text(f"{kit} аптечек даст тебе {str(ConvertMethod(kit, lvl))} уровней")
 
-def ConvertMethod(aptek, lvl, countOfLvl = 0):
-    lvl+=10
-    if aptek < lvl:
+def ConvertMethod(kit, lvl, countOfLvl = 0):
+    satiety = lvl + 10
+    if kit < satiety:
         return countOfLvl
 
     money = 0
-    while aptek > lvl:
-        aptek -= lvl
-        money += lvl * 90
+    while kit > satiety:
+        kit -= satiety
+        money += satiety * 90
 
         lvl+=1
         countOfLvl+=1
 
-    aptek += money / 300
+    kit += money / 300
 
-    return ConvertMethod(aptek, lvl, countOfLvl)
+    return ConvertMethod(kit, lvl, countOfLvl)
 
 app.run()
