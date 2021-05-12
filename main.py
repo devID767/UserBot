@@ -305,7 +305,7 @@ def Duel(client, message):
     if message.text.lower() == "дуэль принять":
         Oldmessage = app.get_messages(message.chat.id, reply_to_message_ids=message.message_id)
         if Oldmessage.from_user.is_self and CanDuel:
-            sleep(15)
+            sleep(10)
             message.reply_text("Реанимировать жабу", quote=False)
             message.reply_text("дуэль", quote=True)
 
@@ -319,6 +319,7 @@ def Convert(client, message):
     message.reply_text(f"{aptek} аптечек даст тебе {str(ConvertMethod(aptek, lvl))} уровней")
 
 def ConvertMethod(aptek, lvl, countOfLvl = 0):
+    lvl+=10
     if aptek < lvl:
         return countOfLvl
 
