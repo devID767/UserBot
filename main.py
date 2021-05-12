@@ -3,7 +3,7 @@ from pyrogram.errors import FloodWait
 
 from time import sleep
 
-import random
+import sqlite3
 
 app = Client("my_account")
 
@@ -11,8 +11,83 @@ CanEat = False
 CanWork = False
 CanDuel = False
 
-IsEating = False
-IsWorking = False
+conn = sqlite3.connect("groups.db")
+cursor = conn.cursor()
+
+# Создание таблицы
+cursor.execute("""CREATE TABLE IF NOT EXISTS groups (
+                   id INTEGER, 
+                   IsEating TEXT, 
+                   IsWorking TEXT);
+               """)
+
+cursor.execute("DELETE FROM groups")
+conn.commit()
+
+conn.close()
+
+
+def InsertToBase(chat_id, IsEating, IsWorking):
+    conn = sqlite3.connect('groups.db')
+    cursor = conn.cursor()
+
+    Delete(chat_id)
+
+    cursor.execute("INSERT INTO groups VALUES(?, ?, ?);", (str(chat_id), str(IsEating), str(IsWorking)))
+    conn.commit()
+
+    conn.close()
+
+def Delete(_chat_id):
+    conn = sqlite3.connect('groups.db')
+    cursor = conn.cursor()
+
+    cursor.execute("DELETE FROM groups WHERE id = ?", (_chat_id,))
+    conn.commit()
+
+    conn.close()
+
+def GetFromBase(_chat_id):
+    try:
+        conn = sqlite3.connect('groups.db')
+        cursor = conn.cursor()
+
+        sql_select_query = """select * from groups where id = ?"""
+        cursor.execute(sql_select_query, (_chat_id,))
+        records = cursor.fetchone()
+        #if records is not None:
+        #    print("ID:", records[0])
+        #    print("IsEating:", records[1])
+        #    print("IsWorking:", records[2])
+        #else:
+        #    print("None")
+
+        cursor.close()
+    except sqlite3.Error as error:
+        print("Ошибка при работе с SQLite", error)
+    finally:
+        if conn:
+            conn.close()
+
+    return records
+
+def isEating(message):
+    if GetFromBase(message.chat.id) is None:
+        return False
+    else:
+        if GetFromBase(message.chat.id)[1] == "True":
+            return True
+        else:
+            return False
+
+def isWorking(message):
+    if GetFromBase(message.chat.id) is None:
+        return False
+    else:
+        if GetFromBase(message.chat.id)[2] == "True":
+            return True
+        else:
+            return False
 
 
 @app.on_message(filters.text & filters.me & filters.command("help", prefixes="."))
@@ -21,21 +96,19 @@ def Help(client, message):
     message.reply_text(".status\n"
                        ".settings\n"
                        ".delete [message]\n"
-                       ".eat [on/name of command/stop]\n"
-                       ".work [on/name of command/delete]\n"
+                       ".eat [on/name of command/stop/off]\n"
+                       ".work [on/name of command/stop/off]\n"
                        ".duel [start/delete]\n"
                        ".type [message]\n"
-                       ".ass\n"
-                       ".pidor\n"
-                       ".echo [num] [message]\n\n"
-                       "Also can duel, eat and work")
-
+                       ".echo [num] [message]\n"
+                       ".convert [kits] [lvl]\n"
+                       "\nAlso can duel, eat and work")
 
 @app.on_message(filters.text & filters.me & filters.command("status", prefixes="."))
-def ShowStatus(client, message):
+def Status(client, message):
     message.delete()
-    message.reply_text(f"IsEating = {IsEating}\n"
-                       f"IsWorking = {IsWorking}")
+    message.reply_text(f"IsEating = {isEating(message)}\n"
+                       f"IsWorking = {isWorking(message)}")
 
 
 @app.on_message(filters.text & filters.me & filters.command("settings", prefixes="."))
@@ -61,7 +134,6 @@ def EatCommand(client, message):
     message.delete()
 
     global CanEat
-    global IsEating
 
     if command == "on":
         CanEat = True
@@ -69,25 +141,30 @@ def EatCommand(client, message):
     elif command.lower() == "покормить жабу" or command.lower() == "откормить жабу":
         Eating(message, command)
     elif command == "stop":
-        CanEat = False
         IsEating = False
+        InsertToBase(message.chat.id, IsEating, isWorking(message))
         message.reply_text("Eat stopped")
+    elif command == "off":
+        CanEat = False
+        message.reply_text("Eat off")
     else:
         message.reply_text("Error or incorrect eat")
 
-
 def Eating(message, eat):
-    global IsEating
+    IsEating = isEating(message)
 
     if not IsEating:
         IsEating = True
-        while CanEat and IsEating:
+        InsertToBase(message.chat.id, IsEating, isWorking(message))
+        while CanEat and isEating(message):
             message.reply_text(eat, quote=False)
-            sleep(5)  # 14400
+            if eat.lower() == "откормить жабу":
+                sleep(14410)  #14400
+            else:
+                sleep(43210) #43200
         message.reply_text("Кормка завершена", quote=False)
-        IsEating = False
     else:
-        message.reply_text("Eating already started", qoute=False)
+        message.reply_text("Eating already started")
 
 
 @app.on_message(filters.command("work", prefixes=".") & filters.me)
@@ -96,7 +173,7 @@ def WorkCommand(client, message):
     message.delete()
 
     global CanWork
-    global IsWorking
+    IsWorking = isWorking(message)
 
     if command == "on":
         CanWork = True
@@ -104,29 +181,32 @@ def WorkCommand(client, message):
     elif command.lower() == "поход в столовую" or command.lower() == "работа крупье" or command.lower() == "работа грабитель":
         Working(message, command)
     elif command == "stop":
-        CanWork = False
         IsWorking = False
+        InsertToBase(message.chat.id, isEating(message), IsWorking)
         message.reply_text("Work stopped")
+    elif command == "off":
+        CanWork = False
+        message.reply_text("Work off")
     else:
         message.reply_text("Error or incorrect name of work")
 
 
 def Working(message, work):
-    global IsWorking
+    IsWorking = isWorking(message)
 
     if not IsWorking:
         IsWorking = True
-        while CanWork and IsWorking:
+        InsertToBase(message.chat.id, isEating(message), IsWorking)
+        while CanWork and isWorking(message):
             message.reply_text("Выйти из подземелья", quote=False)
             message.reply_text("Реанимировать жабу", quote=False)
             message.reply_text(work, quote=False)
-            sleep(5)  # 7200
-            if not IsWorking:
+            sleep(7210)  # 7200
+            if not isWorking(message):
                 break
             message.reply_text("Завершить работу", quote=False)
-            sleep(10)  # 21600
+            sleep(21610)  # 21600
         message.reply_text("Работа завершена", quote=False)
-        IsWorking = False
     else:
         message.reply_text("Working already started")
 
@@ -167,45 +247,45 @@ def type(_, msg):
             sleep(e.x)
 
 
-@app.on_message(filters.command("ass", prefixes=".") & filters.me)
-def ass(_, msg):
-    perc = 0
+#@app.on_message(filters.command("ass", prefixes=".") & filters.me)
+#def ass(_, msg):
+#    perc = 0
+#
+#    while (perc < 100):
+#        try:
+#            text = "Взлом жопы в процессе ..." + str(perc) + "%"
+#            msg.edit(text)
+#
+#            perc += random.randint(3, 5)
+#            sleep(0.1);
+#
+#        except FloodWait as e:
+#            sleep(e.x)
+#
+#    msg.edit("Жопа успешно взломана!")
 
-    while (perc < 100):
-        try:
-            text = "Взлом жопы в процессе ..." + str(perc) + "%"
-            msg.edit(text)
 
-            perc += random.randint(3, 5)
-            sleep(0.1);
-
-        except FloodWait as e:
-            sleep(e.x)
-
-    msg.edit("Жопа успешно взломана!")
-
-
-@app.on_message(filters.command("pidor", prefixes=".") & filters.me)
-def FindPidor(_, message):
-    members = app.get_chat_members(message.chat.id)
-    indexOfPidor = random.randrange(0, len(members), 1)
-    pidorUser = members[indexOfPidor].user
-    pidorUserName = pidorUser.username
-
-    perc = 0
-
-    while (perc < 100):
-        try:
-            text = "Ищу пидора ..." + str(perc) + "%"
-            message.edit(text)
-
-            perc += random.randint(3, 6)
-            sleep(0.1);
-
-        except FloodWait as e:
-            sleep(e.x)
-
-    message.edit(f"Пидором является: @{pidorUserName}")
+#@app.on_message(filters.command("pidor", prefixes=".") & filters.me)
+#def FindPidor(_, message):
+#    members = app.get_chat_members(message.chat.id)
+#    indexOfPidor = random.randrange(0, len(members), 1)
+#    pidorUser = members[indexOfPidor].user
+#    pidorUserName = pidorUser.username
+#
+#    perc = 0
+#
+#    while (perc < 100):
+#        try:
+#            text = "Ищу пидора ..." + str(perc) + "%"
+#            message.edit(text)
+#
+#            perc += random.randint(3, 6)
+#            sleep(0.1);
+#
+#        except FloodWait as e:
+#            sleep(e.x)
+#
+#    message.edit(f"Пидором является: @{pidorUserName}")
 
 
 @app.on_message(filters.command("echo", prefixes=".") & filters.me)
@@ -229,5 +309,29 @@ def Duel(client, message):
             message.reply_text("Реанимировать жабу", quote=False)
             message.reply_text("дуэль", quote=True)
 
+
+@app.on_message(filters.text & filters.me & filters.command("convert", prefixes="."))
+def Convert(client, message):
+    aptek = int(message.text.split(maxsplit=2)[1])
+    lvl = int(message.text.split(maxsplit=2)[2])
+
+    message.delete()
+    message.reply_text(f"{aptek} аптечек даст тебе {str(ConvertMethod(aptek, lvl))} уровней")
+
+def ConvertMethod(aptek, lvl, countOfLvl = 0):
+    if aptek < lvl:
+        return countOfLvl
+
+    money = 0
+    while aptek > lvl:
+        aptek -= lvl
+        money += lvl * 90
+
+        lvl+=1
+        countOfLvl+=1
+
+    aptek += money / 300
+
+    return ConvertMethod(aptek, lvl, countOfLvl)
 
 app.run()
