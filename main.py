@@ -91,7 +91,7 @@ def Help(client, message):
                        ".delete [message]\n"
                        ".eat [on/name of command/stop/off]\n"
                        ".work [on/name of command/stop/off]\n"
-                       ".duel [start/delete]\n"
+                       ".duel [start/stop]\n"
                        ".echo [num] [message]\n"
                        ".convert [kits] [lvl]\n"
                        "\nAlso can duel, eat and work")
