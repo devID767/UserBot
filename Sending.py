@@ -17,9 +17,9 @@ class Work:
                 message.reply_text("Выйти из подземелья", quote=False)
                 message.reply_text("Реанимировать жабу", quote=False)
                 message.reply_text(text, quote=False)
-                workSleep.wait(5) # 7200
+                workSleep.wait(7210) # 7200
                 message.reply_text("Завершить работу", quote=False)
-                workSleep.wait(10) # 21600
+                workSleep.wait(21610) # 21600
             message.reply_text("Работа завершена", quote=False)
             self.IsWorking = False
         else:
@@ -40,10 +40,10 @@ class Eat:
             self.IsEating = True
             while not eatSleep.is_set():
                 message.reply_text(text, quote=False)
-                if text.lower() == "Откормить жабу":
-                    eatSleep.wait(5) #14400
-                else:
-                    eatSleep.wait(5) #43200
+                if text.lower() == "откормить жабу":
+                    eatSleep.wait(14410) #14400
+                elif text.lower() == "покормить жабу":
+                    eatSleep.wait(43210) #43200
             message.reply_text("Кормка завершена", quote=False)
             self.IsEating = False
         else:
