@@ -1,9 +1,11 @@
 from pyrogram import Client, filters
+from pyrogram.types import Message
 from pyrogram.errors import FloodWait
 
 from time import sleep
 
 import Sending
+import threading
 
 app = Client("my_account")
 
@@ -11,7 +13,10 @@ Works = {}
 Eats = {}
 CanDuel = False
 
-@app.on_message(filters.text & filters.me & filters.command("help", prefixes="."))
+Triggers = {}
+Timer = {}
+
+@app.on_message(filters.me & filters.command("help", prefixes="."))
 def Help(client, message):
     message.delete()
     message.reply_text(".status\n"
@@ -23,7 +28,7 @@ def Help(client, message):
                        ".convert [kits] [lvl]\n"
                        "\nAlso can duel, eat and work")
 
-@app.on_message(filters.text & filters.me & filters.command("status", prefixes="."))
+@app.on_message(filters.me & filters.command("status", prefixes="."))
 def Status(client, message):
     message.delete()
 
@@ -41,6 +46,64 @@ def Status(client, message):
                        f"IsWorking = {IsWorking}\n"
                        f"CanDuel = {CanDuel}")
 
+@app.on_message(filters.command("trigger", prefixes=".") & filters.me)
+def TriggerCommand(client, message):
+    command = message.text.split(".trigger ", maxsplit=1)[1]
+
+    if command == "delete":
+        RepeatMessage = app.get_messages(message.chat.id, reply_to_message_ids=message.message_id)
+        if Triggers[RepeatMessage.text].chat.id == message.chat.id:
+            Triggers.pop(RepeatMessage.text)
+            message.reply_text(f'Триггер "{RepeatMessage.text}" : "{command}" удален!')
+    elif command == "show":
+        printed = ""
+        for triggers in Triggers:
+            if Triggers[triggers].chat.id == message.chat.id:
+                printed += f"{triggers} : {Triggers[triggers].text}\n"
+        if printed == "":
+            message.reply_text("Триггеров нет")
+        else:
+            message.reply_text(printed)
+    else:
+        RepeatMessage = app.get_messages(message.chat.id, reply_to_message_ids=message.message_id)
+        Triggers[command.lower()] = RepeatMessage
+        message.reply_text(f'Триггер "{RepeatMessage.text}" : "{command}" добавлен!')
+
+    message.delete()
+
+@app.on_message(filters.command("timer", prefixes=".") & filters.me)
+def TimerCommand(client, message):
+    command = message.text.split(".timer ", maxsplit=1)[1]
+    RepeatMessage = app.get_messages(message.chat.id, reply_to_message_ids=message.message_id)
+
+    global Timer
+
+    try:
+        timer = Timer[RepeatMessage.text]
+    except:
+        print("new")
+
+    if command == "stop" and Timer[timer.text].chat == message.chat.id:
+        timer.msgSleep.set()
+        message.reply_text(f"{timer.text} stopped")
+        Timer.pop(RepeatMessage.text)
+    elif command == "show":
+        printed = ""
+        for timers in Timer:
+            if Timer[timers].chat == message.chat.id:
+                printed += f"{Timer[timers].text} - {Timer[timers].timer}\n"
+        if printed == "":
+            message.reply_text("Таймеров нет")
+        else:
+            message.reply_text(printed)
+    else:
+        timer = Sending.Customise(RepeatMessage.text, int(command), message.chat.id)
+        Timer[RepeatMessage.text] = timer
+        timer.Sending(message)
+
+    message.delete()
+
+
 @app.on_message(filters.command("delete", prefixes=".") & filters.me)
 def DeleteMessages(client, message):
     enteredText = message.text.split(".delete ", maxsplit=1)[1]
@@ -48,7 +111,6 @@ def DeleteMessages(client, message):
     for msg in app.iter_history(message.chat.id, limit=100):
         if msg.text == enteredText:
             app.delete_messages(message.chat.id, msg.message_id, True)
-
 
 @app.on_message(filters.command("eat", prefixes=".") & filters.me)
 def EatCommand(client, message):
@@ -119,7 +181,10 @@ def Duel(client, message):
             sleep(10)
             message.reply_text("Реанимировать жабу", quote=False)
             message.reply_text("дуэль", quote=True)
-
+    elif message.text.lower() in Triggers.keys():
+        Oldmessage = app.get_messages(message.chat.id, reply_to_message_ids=message.message_id)
+        if Oldmessage.from_user.is_self:
+            message.reply_text(Triggers[message.text.lower()].text, quote=True)
 
 @app.on_message(filters.command("echo", prefixes=".") & filters.me)
 def echo(_, msg):
@@ -133,7 +198,7 @@ def echo(_, msg):
         count += 1
 
 
-@app.on_message(filters.text & filters.me & filters.command("convert", prefixes="."))
+@app.on_message(filters.me & filters.command("convert", prefixes="."))
 def Convert(client, message):
     kit = int(message.text.split(maxsplit=2)[1])
     lvl = int(message.text.split(maxsplit=2)[2])

@@ -48,3 +48,21 @@ class Eat:
             self.IsEating = False
         else:
             message.reply_text("Is Eating")
+
+
+class Customise:
+    def __init__(self, text, timer, chat):
+        self.msgSleep = threading.Event()
+
+        self.text = text
+        self.timer = timer
+        self.chat = chat
+    def Sending(self, message):
+        msgSleep = self.msgSleep
+        text = self.text
+        timer = self.timer
+
+        while not msgSleep.is_set():
+            message.reply_text(text, quote=False)
+            msgSleep.wait(timer) #14400
+        message.reply_text(f"Отправка {text} завершена", quote=False)
