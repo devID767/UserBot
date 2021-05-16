@@ -54,7 +54,7 @@ def TriggerCommand(client, message):
         RepeatMessage = app.get_messages(message.chat.id, reply_to_message_ids=message.message_id)
         if Triggers[RepeatMessage.text].chat.id == message.chat.id:
             Triggers.pop(RepeatMessage.text)
-            message.reply_text(f'Триггер "{RepeatMessage.text}" : "{command}" удален!')
+            message.reply_text(f'Триггер "{command}" : "{RepeatMessage.text}" удален!')
     elif command == "show":
         printed = ""
         for triggers in Triggers:
@@ -67,7 +67,7 @@ def TriggerCommand(client, message):
     else:
         RepeatMessage = app.get_messages(message.chat.id, reply_to_message_ids=message.message_id)
         Triggers[command.lower()] = RepeatMessage
-        message.reply_text(f'Триггер "{RepeatMessage.text}" : "{command}" добавлен!')
+        message.reply_text(f'Триггер "{command}" : "{RepeatMessage.text}" добавлен!')
 
     message.delete()
 
@@ -91,7 +91,7 @@ def TimerCommand(client, message):
         printed = ""
         for timers in Timer:
             if Timer[timers].chat == message.chat.id:
-                printed += f"{Timer[timers].text} - {Timer[timers].timer}\n"
+                printed += f"{Timer[timers].text} : {Timer[timers].timer}\n"
         if printed == "":
             message.reply_text("Таймеров нет")
         else:
