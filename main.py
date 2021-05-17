@@ -14,7 +14,7 @@ Eats = {}
 CanDuel = False
 
 Triggers = {}
-Timer = {}
+Timer = []
 
 @app.on_message(filters.me & filters.command("help", prefixes="."))
 def Help(client, message):
@@ -33,12 +33,12 @@ def Status(client, message):
     message.delete()
 
     try:
-        IsWorking = Works.get(message.chat.id).IsWorking
+        IsWorking = Works.get(message.chat.id).is_started
     except:
         IsWorking = False
 
     try:
-        IsEating = Eats.get(message.chat.id).IsEating
+        IsEating = Eats.get(message.chat.id).is_started
     except:
         IsEating = False
 
@@ -72,36 +72,33 @@ def TriggerCommand(client, message):
     message.delete()
 
 @app.on_message(filters.command("timer", prefixes=".") & filters.me)
-def TimerCommand(client, message):
+async def TimerCommand(client, message):
     command = message.text.split(".timer ", maxsplit=1)[1]
-    RepeatMessage = app.get_messages(message.chat.id, reply_to_message_ids=message.message_id)
+    RepeatMessage = await app.get_messages(message.chat.id, reply_to_message_ids=message.message_id)
 
     global Timer
 
-    try:
-        timer = Timer[RepeatMessage.text]
-    except:
-        print("new")
-
-    if command == "stop" and Timer[timer.text].chat == message.chat.id:
-        timer.msgSleep.set()
-        message.reply_text(f"{timer.text} stopped")
-        Timer.pop(RepeatMessage.text)
+    if command == "stop":
+        for timer in Timer:
+            if timer.text == RepeatMessage.text and timer.chat == message.chat.id:
+                await timer.Stop()
+                Timer.remove(timer)
+                await message.reply_text(f"{timer.text} stopped")
     elif command == "show":
         printed = ""
-        for timers in Timer:
-            if Timer[timers].chat == message.chat.id:
-                printed += f"{Timer[timers].text} : {Timer[timers].timer}\n"
-        if printed == "":
-            message.reply_text("Таймеров нет")
+        for timer in Timer:
+            if timer.chat == message.chat.id:
+                printed += f"{timer.text} : {timer.time}\n"
+        if printed != "":
+            await message.reply_text(printed)
         else:
-            message.reply_text(printed)
+            await message.reply_text("Таймеров нет")
     else:
         timer = Sending.Customise(RepeatMessage.text, int(command), message.chat.id)
-        Timer[RepeatMessage.text] = timer
-        timer.Sending(message)
+        Timer.append(timer)
+        await timer.Start(message)
 
-    message.delete()
+    await message.delete()
 
 
 @app.on_message(filters.command("delete", prefixes=".") & filters.me)
@@ -113,9 +110,9 @@ def DeleteMessages(client, message):
             app.delete_messages(message.chat.id, msg.message_id, True)
 
 @app.on_message(filters.command("eat", prefixes=".") & filters.me)
-def EatCommand(client, message):
+async def EatCommand(client, message):
     command = message.text.split(".eat ", maxsplit=1)[1]
-    message.delete()
+    await message.delete()
 
     global Eats
 
@@ -126,19 +123,18 @@ def EatCommand(client, message):
         Eats[message.chat.id] = eat
 
     if command.lower() == "покормить жабу" or command.lower() == "откормить жабу":
-        eat.Eating(message, command)
+        await eat.Start(message, command)
     elif command == "stop":
-        eat.IsEating = False
-        eat.eatSleep.set()
-        Eats.pop(message.chat.id)
-        message.reply_text("Eat stopped")
+        await eat.Stop()
+        del Eats[message.chat.id]
+        await message.reply_text("Eat stopped")
     else:
-        message.reply_text("Unknown command")
+        await message.reply_text("Unknown command")
 
 @app.on_message(filters.command("work", prefixes=".") & filters.me)
-def WorkCommand(client, message):
+async def WorkCommand(client, message):
     command = message.text.split(".work ", maxsplit=1)[1]
-    message.delete()
+    await message.delete()
 
     global Works
 
@@ -149,14 +145,13 @@ def WorkCommand(client, message):
         Works[message.chat.id] = work
 
     if command.lower() == "поход в столовую" or command.lower() == "работа крупье" or command.lower() == "работа грабитель":
-        work.Working(message, command)
+        await work.Start(message, command)
     elif command == "stop":
-        work.IsWorking = False
-        work.workSleep.set()
-        Works.pop(message.chat.id)
-        message.reply_text("Work stopped")
+        await work.Stop()
+        del Works[message.chat.id]
+        await message.reply_text("Work stopped")
     else:
-        message.reply_text("Unknown command")
+        await message.reply_text("Unknown command")
 
 
 @app.on_message(filters.command("duel", prefixes=".") & filters.me)

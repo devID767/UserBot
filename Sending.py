@@ -1,68 +1,101 @@
-import threading
-
+import asyncio
 
 class Work:
-
     def __init__(self):
-        self.workSleep = threading.Event()
+        self.is_started = False
+        self._task = None
 
-        self.IsWorking = False
+    async def Start(self, message, text):
+        if not self.is_started:
+            self.is_started = True
+            self._task = asyncio.ensure_future(self._Working(message, text))
 
-    def Working(self, message, text):
-        workSleep = self.workSleep
+    async def Stop(self):
+        if self.is_started:
+            self.is_started = False
+            self._task.cancel()
 
-        if not self.IsWorking:
-            self.IsWorking = True
-            while not workSleep.is_set():
-                message.reply_text("Выйти из подземелья", quote=False)
-                message.reply_text("Реанимировать жабу", quote=False)
-                message.reply_text(text, quote=False)
-                workSleep.wait(7210) # 7200
-                message.reply_text("Завершить работу", quote=False)
-                workSleep.wait(21610) # 21600
-            message.reply_text("Работа завершена", quote=False)
-            self.IsWorking = False
-        else:
-            message.reply_text("Is Working")
+    async def _Working(self, message, text):
+        while True:
+            await message.reply_text("Выйти из подземелья", quote=False)
+            await message.reply_text("Реанимировать жабу", quote=False)
+            await message.reply_text(text, quote=False)
+            await asyncio.sleep(5)  # 7200
 
+            await message.reply_text("Завершить работу", quote=False)
+            await asyncio.sleep(3)  # 21600
 
 class Eat:
-
     def __init__(self):
-        self.eatSleep = threading.Event()
+        self.is_started = False
+        self._task = None
 
-        self.IsEating = False
-
-    def Eating(self, message, text):
-        eatSleep = self.eatSleep
-
-        if not self.IsEating:
-            self.IsEating = True
-            while not eatSleep.is_set():
-                message.reply_text(text, quote=False)
-                if text.lower() == "откормить жабу":
-                    eatSleep.wait(14410) #14400
-                elif text.lower() == "покормить жабу":
-                    eatSleep.wait(43210) #43200
-            message.reply_text("Кормка завершена", quote=False)
-            self.IsEating = False
+    async def Start(self, message, text):
+        if not self.is_started:
+            self.is_started = True
+            self._task = asyncio.ensure_future(self._Eating(message, text))
         else:
-            message.reply_text("Is Eating")
+            await message.reply_text("Жаба уже кушает!", quote=False)
+
+
+    async def Stop(self):
+        if self.is_started:
+            self.is_started = False
+            self._task.cancel()
+
+    async def _Eating(self, message, text):
+        while True:
+            await message.reply_text(text, quote=False)
+            if text.lower() == "откормить жабу":
+                await asyncio.sleep(5) #14400
+            elif text.lower() == "покормить жабу":
+                await asyncio.sleep(10) #43200
 
 
 class Customise:
-    def __init__(self, text, timer, chat):
-        self.msgSleep = threading.Event()
-
+    def __init__(self, text, time, chat):
         self.text = text
-        self.timer = timer
+        self.time = time
         self.chat = chat
-    def Sending(self, message):
-        msgSleep = self.msgSleep
-        text = self.text
-        timer = self.timer
 
-        while not msgSleep.is_set():
-            message.reply_text(text, quote=False)
-            msgSleep.wait(timer) #14400
-        message.reply_text(f"Отправка {text} завершена", quote=False)
+        self.is_started = False
+        self._task = None
+
+    async def Start(self, message):
+        if not self.is_started:
+            self.is_started = True
+            self._task = asyncio.ensure_future(self._Sending(message))
+
+    async def Stop(self):
+        if self.is_started:
+            self.is_started = False
+            self._task.cancel()
+
+    async def _Sending(self, message):
+        while True:
+            await message.reply_text(self.text, quote=False)
+            await asyncio.sleep(self.time)
+
+class Periodic:
+    def __init__(self, func, time):
+        self.func = func
+        self.time = time
+        self.is_started = False
+        self._task = None
+
+    async def start(self):
+        if not self.is_started:
+            self.is_started = True
+            # Start task to call func periodically:
+            self._task = asyncio.ensure_future(self._run())
+
+    async def stop(self):
+        if self.is_started:
+            self.is_started = False
+            # Stop task and await it stopped:
+            self._task.cancel()
+
+    async def _run(self):
+        while True:
+            await asyncio.sleep(self.time)
+            self.func()
