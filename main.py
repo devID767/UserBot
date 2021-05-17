@@ -14,7 +14,7 @@ Eats = {}
 CanDuel = False
 
 Triggers = {}
-Timer = []
+Timers = []
 
 @app.on_message(filters.me & filters.command("help", prefixes="."))
 def Help(client, message):
@@ -23,8 +23,10 @@ def Help(client, message):
                        ".delete [message]\n"
                        ".eat [name of command/stop]\n"
                        ".work [name of command/stop]\n"
+                       ".timer [sec] (reply on message)\n"
+                       ".trigger [name of trigger] (reply on message)\n"
                        ".duel [start/stop]\n"
-                       ".echo [num] [message]\n"
+                       ".echo [count] [message]\n"
                        ".convert [kits] [lvl]\n"
                        "\nAlso can duel, eat and work")
 
@@ -52,9 +54,10 @@ def TriggerCommand(client, message):
 
     if command == "delete":
         RepeatMessage = app.get_messages(message.chat.id, reply_to_message_ids=message.message_id)
-        if Triggers[RepeatMessage.text].chat.id == message.chat.id:
-            Triggers.pop(RepeatMessage.text)
-            message.reply_text(f'Триггер "{command}" : "{RepeatMessage.text}" удален!')
+        if Triggers[RepeatMessage.text.lower()].chat.id == message.chat.id:
+            #Triggers.pop(RepeatMessage.text)
+            message.reply_text(f'Триггер "{RepeatMessage.text}" : "{Triggers[RepeatMessage.text.lower()].text}" удален!')
+            del Triggers[RepeatMessage.text.lower()]
     elif command == "show":
         printed = ""
         for triggers in Triggers:
@@ -76,17 +79,17 @@ async def TimerCommand(client, message):
     command = message.text.split(".timer ", maxsplit=1)[1]
     RepeatMessage = await app.get_messages(message.chat.id, reply_to_message_ids=message.message_id)
 
-    global Timer
+    global Timers
 
     if command == "stop":
-        for timer in Timer:
+        for timer in Timers:
             if timer.text == RepeatMessage.text and timer.chat == message.chat.id:
                 await timer.Stop()
-                Timer.remove(timer)
+                Timers.remove(timer)
                 await message.reply_text(f"{timer.text} stopped")
     elif command == "show":
         printed = ""
-        for timer in Timer:
+        for timer in Timers:
             if timer.chat == message.chat.id:
                 printed += f"{timer.text} : {timer.time}\n"
         if printed != "":
@@ -95,7 +98,7 @@ async def TimerCommand(client, message):
             await message.reply_text("Таймеров нет")
     else:
         timer = Sending.Customise(RepeatMessage.text, int(command), message.chat.id)
-        Timer.append(timer)
+        Timers.append(timer)
         await timer.Start(message)
 
     await message.delete()
