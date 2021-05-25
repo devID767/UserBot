@@ -5,9 +5,9 @@ from pyrogram.errors import FloodWait
 from time import sleep
 
 import Sending
-import threading
 
-app = Client("my_account")
+#app = Client("my_account")
+app = Client("pasha")
 
 Works = {}
 Eats = {}
@@ -55,7 +55,6 @@ def TriggerCommand(client, message):
     if command == "delete":
         RepeatMessage = app.get_messages(message.chat.id, reply_to_message_ids=message.message_id)
         if Triggers[RepeatMessage.text.lower()].chat.id == message.chat.id:
-            #Triggers.pop(RepeatMessage.text)
             message.reply_text(f'Триггер "{RepeatMessage.text}" : "{Triggers[RepeatMessage.text.lower()].text}" удален!')
             del Triggers[RepeatMessage.text.lower()]
     elif command == "show":
