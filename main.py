@@ -7,7 +7,8 @@ from time import sleep
 import Sending
 
 #app = Client("my_account")
-app = Client("pasha")
+app = Client("anya")
+#app = Client("pasha")
 
 Works = {}
 Eats = {}
