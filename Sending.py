@@ -1,5 +1,7 @@
 import asyncio
 
+import Data
+
 class Work:
     def __init__(self):
         self.is_started = False
@@ -73,5 +75,7 @@ class Customise:
 
     async def _Sending(self, message):
         while True:
-            await message.reply_text(self.text, quote=False)
+            msg = await message.reply_text(self.text, quote=False)
+            if msg.text.lower() in Data.Triggers.keys():
+                await message.reply_text(Data.Triggers[msg.text.lower()].text, quote=True)
             await asyncio.sleep(self.time)
