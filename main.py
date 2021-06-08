@@ -184,8 +184,7 @@ async def Duel(client, message):
         if Oldmessage.from_user.is_self and Data.CanDuel:
             await asyncio.sleep(10)
             if Data.DuelCount[message.chat.id] <= 0:
-                Data.CanDuel = False
-                msg = await message.reply_text("Дуэль выключена")
+                msg = await message.reply_text("Count истёк")
                 await Trigger(client, msg)
             else:
                 await message.reply_text("Реанимировать жабу", quote=False)
