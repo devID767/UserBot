@@ -1,8 +1,6 @@
 import asyncio
 
 from pyrogram import Client, filters
-from pyrogram.types import Message
-from pyrogram.errors import FloodWait
 
 import Sending
 import Data
@@ -40,9 +38,14 @@ async def Status(client, message):
     except:
         IsEating = False
 
+    try:
+        Count = Data.DuelCount[message.chat.id]
+    except:
+        Count = 0
+
     await message.reply_text(f"IsEating = {IsEating}\n"
                        f"IsWorking = {IsWorking}\n"
-                       f"CanDuel = {Data.CanDuel} : {Data.DuelCount}")
+                       f"CanDuel = {Data.CanDuel} : {Count}")
 
 @app.on_message(filters.command("trigger", prefixes=".") & filters.me)
 async def TriggerCommand(client, message):
@@ -154,29 +157,33 @@ async def DuelCommand(client, message):
 
     try:
         Count = int(message.text.split(maxsplit=2)[2])
+        if Count <= 0:
+            await message.reply_text("Норм так математика")
+            return
     except:
-        Count = 10000
+        Count = 5000
 
     await message.delete()
     if command == "start":
-        Data.DuelCount = Count
+        Data.DuelCount[message.chat.id] = Count
         Data.CanDuel = True
         await message.reply_text(f"Дуэль включена на {Count} боев")
     elif command == "stop":
         Data.CanDuel = False
-        await message.reply_text("Дуэль выключена")
+        Data.DuelCount[message.chat.id] = 0
     else:
         await message.reply_text("Unknown command")
+
 
 @app.on_message(filters.text & filters.reply)
 async def Duel(client, message):
     if message.text.lower() == "дуэль принять":
-        Data.DuelCount -= 1
+        Data.DuelCount[message.chat.id] -= 1
 
         Oldmessage = await app.get_messages(message.chat.id, reply_to_message_ids=message.message_id)
         if Oldmessage.from_user.is_self and Data.CanDuel:
             await asyncio.sleep(10)
-            if Data.DuelCount <= 0:
+            if Data.DuelCount[message.chat.id] <= 0:
                 Data.CanDuel = False
                 msg = await message.reply_text("Дуэль выключена")
                 await Trigger(client, msg)
@@ -192,7 +199,7 @@ async def echo(_, msg):
     max = int(msg.text.split(maxsplit=2)[1])
 
     msg.delete()
-    while (max != count & max <= 100):
+    while (max != count & max <= 100 & max > 0):
         await msg.reply_text(orig_text)
         count += 1
 

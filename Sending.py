@@ -39,7 +39,6 @@ class Eat:
         else:
             await message.reply_text("Жаба уже кушает!", quote=False)
 
-
     async def Stop(self):
         if self.is_started:
             self.is_started = False
