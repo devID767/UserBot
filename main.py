@@ -16,10 +16,12 @@ async def Help(client, message):
                        ".delete [message]\n"
                        ".eat [name of command/stop]\n"
                        ".work [name of command/stop]\n"
-                       ".timer [num/stop/show] [sec/ minutes/ hours/ days] (ответом на сообщение)\n"
+                       ".timer [num/stop/show] [sec/ minutes/ hours/ days]\n"
+                             "(ответом на сообщение. \nЕсли набрать вначале сообщения '.test', то оно автоматически удалится)\n"
                        ".trigger [name of trigger/delete/show]\n"
-                             "(ответом на сообщение. Если набрать вначале сообщения '.test', то оно автоматически удалится)\n"
+                             "(ответом на сообщение. \nЕсли набрать вначале сообщения '.test', то оно автоматически удалится)\n"
                        ".duel [start/stop] [count/none]\n"
+                       ".craft\n"
                        ".echo [count] [message]\n"
                        ".convert [kits] [lvl]\n"
                        "\nAlso can duel, eat and work")
@@ -127,7 +129,6 @@ async def TimerCommand(client, message):
         await timer.Start(message)
 
     await message.delete()
-
 
 @app.on_message(filters.command("delete", prefixes=".") & filters.me)
 def DeleteMessages(client, message):
