@@ -232,6 +232,6 @@ async def ConvertMethod(kit, lvl, countOfLvl = 0):
 
     kit += money / 300
 
-    return ConvertMethod(kit, lvl, countOfLvl)
+    return await ConvertMethod(kit, lvl, countOfLvl)
 
 app.run()
