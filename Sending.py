@@ -54,14 +54,16 @@ class Eat:
 
 
 class Customise:
-    def __init__(self, text, time, chat):
+    def __init__(self, text, time, typeOfTime, chat):
         self.text = text
         self.time = time
+        self.typeOfTime = typeOfTime
         self.chat = chat
 
         self.is_started = False
         self._task = None
 
+        self.title = f"{text} : {time} : {typeOfTime}\n"
     async def Start(self, message):
         if not self.is_started:
             self.is_started = True

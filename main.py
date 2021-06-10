@@ -16,7 +16,7 @@ async def Help(client, message):
                        ".delete [message]\n"
                        ".eat [name of command/stop]\n"
                        ".work [name of command/stop]\n"
-                       ".timer [sec/stop/show] (ответом на сообщение)\n"
+                       ".timer [num/stop/show] [sec/ minutes/ hours/ days] (ответом на сообщение)\n"
                        ".trigger [name of trigger/delete/show]\n"
                              "(ответом на сообщение. Если набрать вначале сообщения '.test', то оно автоматически удалится)\n"
                        ".duel [start/stop] [count/none]\n"
@@ -68,7 +68,7 @@ async def TriggerCommand(client, message):
     else:
         RepeatMessage = await app.get_messages(message.chat.id, reply_to_message_ids=message.message_id)
         if '.test' in RepeatMessage.text:
-            RepeatMessage.text = RepeatMessage.text.split('.test')[1]
+            RepeatMessage.text = RepeatMessage.text.split(maxsplit=1)[1]
         Data.Triggers[command.lower()] = RepeatMessage
         await message.reply_text(f'Триггер "{command}" : "{RepeatMessage.text}" добавлен!')
 
@@ -76,7 +76,7 @@ async def TriggerCommand(client, message):
 
 @app.on_message(filters.command("timer", prefixes=".") & filters.me)
 async def TimerCommand(client, message):
-    command = message.text.split(".timer ", maxsplit=1)[1]
+    command = message.text.split(maxsplit=2)[1]
     RepeatMessage = await app.get_messages(message.chat.id, reply_to_message_ids=message.message_id)
 
     if command == "stop":
@@ -89,13 +89,40 @@ async def TimerCommand(client, message):
         printed = ""
         for timer in Data.Timers:
             if timer.chat == message.chat.id:
-                printed += f"{timer.text} : {timer.time}\n"
+                if timer.typeOfTime == 'sec':
+                    time = timer.time
+                elif timer.typeOfTime == 'minutes':
+                    time = timer.time / 60
+                elif timer.typeOfTime == 'hours':
+                    time = timer.time / 3600
+                elif timer.typeOfTime == 'days':
+                    time = timer.time / 86400
+                printed += f"{timer.text} : {int(time)} {timer.typeOfTime}\n"
         if printed != "":
             await message.reply_text(printed)
         else:
             await message.reply_text("Таймеров нет")
     else:
-        timer = Sending.Customise(RepeatMessage.text, int(command), message.chat.id)
+        try:
+            typeOfTime = message.text.split(maxsplit=2)[2]
+        except:
+            typeOfTime = ''
+
+        if typeOfTime == 'sec':
+            time = int(command)
+        elif typeOfTime == 'minutes':
+            time = int(command) * 60
+        elif typeOfTime == 'hours':
+            time = int(command) * 3600
+        elif typeOfTime == 'days':
+            time = int(command) * 86400
+        else:
+            await message.reply_text('Неверно задан тип времени')
+
+        if '.test' in RepeatMessage.text:
+            RepeatMessage.text = RepeatMessage.text.split(maxsplit=1)[1]
+
+        timer = Sending.Customise(RepeatMessage.text, time, typeOfTime, message.chat.id)
         Data.Timers.append(timer)
         await timer.Start(message)
 
@@ -190,6 +217,14 @@ async def Duel(client, message):
                 await message.reply_text("Реанимировать жабу", quote=False)
                 await message.reply_text("дуэль", quote=True)
 
+@app.on_message(filters.command("craft", prefixes=".") & filters.me)
+async def echo(_, message):
+    await message.delete()
+    await message.reply_text('Скрафтить клюв цапли')
+    await message.reply_text('Скрафтить букашкомет')
+    await message.reply_text('Скрафтить наголовник из клюва цапли')
+    await message.reply_text('Скрафтить нагрудник из клюва цапли')
+    await message.reply_text('Скрафтить налапники из клюва цапли')
 
 @app.on_message(filters.command("echo", prefixes=".") & filters.me)
 async def echo(_, msg):
@@ -197,9 +232,9 @@ async def echo(_, msg):
     orig_text = msg.text.split(maxsplit=2)[2]
     max = int(msg.text.split(maxsplit=2)[1])
 
-    msg.delete()
+    await msg.delete()
     while (max != count & max <= 100 & max > 0):
-        await msg.reply_text(orig_text)
+        await app.send_message(msg.chat.id, orig_text)
         count += 1
 
 
@@ -213,8 +248,11 @@ async def Convert(client, message):
 
 @app.on_message(filters.text)
 async def Trigger(client, message):
-    if message.text.lower() in Data.Triggers.keys():
-        await message.reply_text(Data.Triggers[message.text.lower()].text, quote=True)
+    if message.text.lower() in Data.Triggers:
+        if Data.Triggers[message.text.lower()].chat.id == message.chat.id:
+            msg = await message.reply_text(Data.Triggers[message.text.lower()].text, quote=True)
+            await Trigger(client, msg)
+
 
 async def ConvertMethod(kit, lvl, countOfLvl = 0):
     satiety = lvl + 10
