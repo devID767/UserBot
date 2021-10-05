@@ -105,8 +105,7 @@ async def TriggerCommand(client, message):
     await message.reply_text(f'Триггер "{command}" : "{RepeatMessage.text}" добавлен!')
 
     await message.delete()
-for timerstate in Data.TimersState:
-    print(timerstate)
+
 @app.on_message(filters.command("timer", prefixes=".") & filters.me)
 async def TimerCommand(client, message):
     command = message.text.split(maxsplit=2)[1]
