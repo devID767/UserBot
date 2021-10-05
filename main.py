@@ -18,7 +18,7 @@ async def Help(client, message):
                        ".work [name of command/stop]\n"
                        ".timer [num/stop/show] [sec/ minutes/ hours/ days]\n"
                              "(ответом на сообщение. \nЕсли набрать вначале сообщения '.test', то оно автоматически удалится)\n"
-                       ".trigger [name of trigger/delete/show]\n"
+                       ".trigger [name of trigger/delete/show/all/restore]\n"
                              "(ответом на сообщение. \nЕсли набрать вначале сообщения '.test', то оно автоматически удалится)\n"
                        ".duel [start/stop] [count/none]\n"
                        ".craft\n"
@@ -55,23 +55,39 @@ async def TriggerCommand(client, message):
 
     if command == "delete":
         RepeatMessage = await app.get_messages(message.chat.id, reply_to_message_ids=message.message_id)
-        if Data.Triggers[RepeatMessage.text.lower()].chat.id == message.chat.id:
-            await message.reply_text(f'Триггер "{RepeatMessage.text}" : "{Data.Triggers[RepeatMessage.text.lower()].text}" удален!')
+        if Data.Triggers[RepeatMessage.text.lower()]['chat'] == message.chat.id:
+            await message.reply_text(f'Триггер "{RepeatMessage.text}" : "{Data.Triggers[RepeatMessage.text.lower()]["text"]}" удален!')
             del Data.Triggers[RepeatMessage.text.lower()]
+        Data.saveTriggers()
+    elif command == "restore":
+        Data.Triggers.clear()
+        Data.saveTriggers()
+        await message.reply_text(
+            f'Триггеры удалены')
     elif command == "show":
         printed = ""
         for triggers in Data.Triggers:
-            if Data.Triggers[triggers].chat.id == message.chat.id:
-                printed += f"{triggers} : {Data.Triggers[triggers].text}\n"
+            if Data.Triggers[triggers].get("chat") == message.chat.id:
+                printed += f"{triggers} : {Data.Triggers[triggers].get('text')}\n"
+        if printed == "":
+            await message.reply_text("Триггеров нет")
+        else:
+            await message.reply_text(printed)
+    elif command == "all":
+        printed = ""
+        for triggers in Data.Triggers:
+            printed += f"{triggers} : {Data.Triggers[triggers].get('text')} \n{Data.Triggers[triggers].get('chat')}\n"
         if printed == "":
             await message.reply_text("Триггеров нет")
         else:
             await message.reply_text(printed)
     else:
         RepeatMessage = await app.get_messages(message.chat.id, reply_to_message_ids=message.message_id)
+
         if '.test' in RepeatMessage.text:
             RepeatMessage.text = RepeatMessage.text.split(maxsplit=1)[1]
-        Data.Triggers[command.lower()] = RepeatMessage
+
+        Data.newTrigger(command.lower(), RepeatMessage.text, RepeatMessage.chat.id)
         await message.reply_text(f'Триггер "{command}" : "{RepeatMessage.text}" добавлен!')
 
     await message.delete()
@@ -126,6 +142,7 @@ async def TimerCommand(client, message):
 
         timer = Sending.Customise(RepeatMessage.text, time, typeOfTime, message.chat.id)
         Data.Timers.append(timer)
+        Data.saveArray("Timers", Data.Timers)
         await timer.Start(message)
 
     await message.delete()
@@ -229,12 +246,12 @@ async def echo(_, message):
 
 @app.on_message(filters.command("echo", prefixes=".") & filters.me)
 async def echo(_, msg):
-    count = 0
+    count = int(0)
     orig_text = msg.text.split(maxsplit=2)[2]
     max = int(msg.text.split(maxsplit=2)[1])
 
     await msg.delete()
-    while (max != count & max <= 100 & max > 0):
+    while (int(max) != int(count)) and (int(max) <= 100) and (int(max) > 0):
         await app.send_message(msg.chat.id, orig_text)
         count += 1
 
@@ -247,11 +264,19 @@ async def Convert(client, message):
     await message.delete()
     await message.reply_text(f"с {lvl} уровня {kit} аптечек дадут тебе {str(await ConvertMethod(kit, lvl))} уровней")
 
-@app.on_message(filters.text)
+@app.on_message(filters.media | filters.text)
 async def Trigger(client, message):
-    if message.text.lower() in Data.Triggers:
-        if Data.Triggers[message.text.lower()].chat.id == message.chat.id:
-            msg = await message.reply_text(Data.Triggers[message.text.lower()].text, quote=True)
+    if message.media:
+        try:
+            text = message.caption.lower()
+        except:
+            return
+    else:
+        text = message.text.lower()
+
+    if text in Data.Triggers:
+        if Data.Triggers[text].get('chat') == message.chat.id:
+            msg = await message.reply_text(Data.Triggers[text].get('text'), quote=True)
             await Trigger(client, msg)
 
 
