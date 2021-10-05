@@ -55,8 +55,8 @@ async def TriggerCommand(client, message):
 
     if command == "delete":
         RepeatMessage = await app.get_messages(message.chat.id, reply_to_message_ids=message.message_id)
-        if Data.Triggers[RepeatMessage.text.lower()]['chat'] == message.chat.id:
-            await message.reply_text(f'Триггер "{RepeatMessage.text}" : "{Data.Triggers[RepeatMessage.text.lower()]["text"]}" удален!')
+        if Data.Triggers[RepeatMessage.text.lower()].get('chat') == message.chat.id:
+            await message.reply_text(f'Триггер "{RepeatMessage.text}" : "{Data.Triggers[RepeatMessage.text.lower()].get("text")}" удален!')
             del Data.Triggers[RepeatMessage.text.lower()]
         Data.saveTriggers()
     elif command == "restore":
@@ -87,35 +87,83 @@ async def TriggerCommand(client, message):
         if '.test' in RepeatMessage.text:
             RepeatMessage.text = RepeatMessage.text.split(maxsplit=1)[1]
 
-        Data.newTrigger(command.lower(), RepeatMessage.text, RepeatMessage.chat.id)
+        Data.newTrigger(command.lower().strip(), RepeatMessage.text, RepeatMessage.chat.id)
         await message.reply_text(f'Триггер "{command}" : "{RepeatMessage.text}" добавлен!')
 
     await message.delete()
 
+@app.on_message(filters.command("triggerFrom", prefixes=".") & filters.me)
+async def TriggerCommand(client, message):
+    command = message.text.split(".triggerFrom ", maxsplit=1)[1]
+
+    RepeatMessage = await app.get_messages(message.chat.id, reply_to_message_ids=message.message_id)
+
+    if '.test' in RepeatMessage.text:
+        RepeatMessage.text = RepeatMessage.text.split(maxsplit=1)[1]
+
+    Data.newTrigger(command.lower().strip(), RepeatMessage.text, RepeatMessage.chat.id, RepeatMessage.from_user.id)
+    await message.reply_text(f'Триггер "{command}" : "{RepeatMessage.text}" добавлен!')
+
+    await message.delete()
+for timerstate in Data.TimersState:
+    print(timerstate)
 @app.on_message(filters.command("timer", prefixes=".") & filters.me)
 async def TimerCommand(client, message):
     command = message.text.split(maxsplit=2)[1]
     RepeatMessage = await app.get_messages(message.chat.id, reply_to_message_ids=message.message_id)
 
-    if command == "stop":
+    if command == "start":
+        for timerstate in Data.TimersState:
+            if message.chat.id == timerstate.get('chat'):
+                timer = Sending.Customise(timerstate.get('text'), timerstate.get('time'), timerstate.get('typeOfTime'), timerstate.get('chat'))
+                await timer.Start(message)
+                Data.Timers.append(timer)
+    elif command == "stop":
         for timer in Data.Timers:
             if timer.text == RepeatMessage.text and timer.chat == message.chat.id:
                 await timer.Stop()
                 Data.Timers.remove(timer)
                 await message.reply_text(f"{timer.text} stopped")
+        for timerstate in Data.TimersState:
+            if timerstate.get('text') == RepeatMessage.text and timerstate.get('chat') == message.chat.id:
+                Data.TimersState.remove(timerstate)
+                Data.saveTimersState()
+    elif command == "restore":
+        for timer in Data.Timers:
+            await timer.Stop()
+            await message.reply_text(f"{timer.text} stopped")
+        Data.TimersState.clear()
+        Data.saveTimersState()
+        await message.reply_text(f"Timers deleted")
     elif command == "show":
         printed = ""
-        for timer in Data.Timers:
-            if timer.chat == message.chat.id:
-                if timer.typeOfTime == 'sec':
-                    time = timer.time
-                elif timer.typeOfTime == 'minutes':
-                    time = timer.time / 60
-                elif timer.typeOfTime == 'hours':
-                    time = timer.time / 3600
-                elif timer.typeOfTime == 'days':
-                    time = timer.time / 86400
-                printed += f"{timer.text} : {int(time)} {timer.typeOfTime}\n"
+        for timerstate in Data.TimersState:
+            if timerstate.get('chat') == message.chat.id:
+                if timerstate.get('typeOfTime') == 'sec':
+                    time = timerstate.get('time')
+                elif timerstate.get('typeOfTime') == 'minutes':
+                    time = timerstate.get('time') / 60
+                elif timerstate.get('typeOfTime') == 'hours':
+                    time = timerstate.get('time') / 3600
+                elif timerstate.get('typeOfTime') == 'days':
+                    time = timerstate.get('time') / 86400
+                printed += f"{timerstate.get('text')} : {int(time)} {timerstate.get('typeOfTime')}\n"
+        if printed != "":
+            await message.reply_text(printed)
+        else:
+            await message.reply_text("Таймеров нет")
+    elif command == "all":
+        printed = ""
+        for timerstate in Data.TimersState:
+            if timerstate.get('typeOfTime') == 'sec':
+                time = timerstate.get('time')
+            elif timerstate.get('typeOfTime') == 'minutes':
+                time = timerstate.get('time') / 60
+            elif timerstate.get('typeOfTime') == 'hours':
+                time = timerstate.get('time') / 3600
+            elif timerstate.get('typeOfTime') == 'days':
+                time = timerstate.get('time') / 86400
+            printed += f"{timerstate.get('text')} : {int(time)} {timerstate.get('typeOfTime')}, {timerstate.get('chat')}\n"
         if printed != "":
             await message.reply_text(printed)
         else:
@@ -141,9 +189,9 @@ async def TimerCommand(client, message):
             RepeatMessage.text = RepeatMessage.text.split(maxsplit=1)[1]
 
         timer = Sending.Customise(RepeatMessage.text, time, typeOfTime, message.chat.id)
-        Data.Timers.append(timer)
-        Data.saveArray("Timers", Data.Timers)
         await timer.Start(message)
+        Data.Timers.append(timer)
+        Data.newTimerState(Data.TimerState(RepeatMessage.text, time, typeOfTime, message.chat.id))
 
     await message.delete()
 
@@ -275,10 +323,9 @@ async def Trigger(client, message):
         text = message.text.lower()
 
     if text in Data.Triggers:
-        if Data.Triggers[text].get('chat') == message.chat.id:
+        if Data.Triggers[text].get('chat') == message.chat.id and (Data.Triggers[text].get('boss') == 0 or Data.Triggers[text].get('boss') == message.from_user.id):
             msg = await message.reply_text(Data.Triggers[text].get('text'), quote=True)
             await Trigger(client, msg)
-
 
 async def ConvertMethod(kit, lvl, countOfLvl = 0):
     satiety = lvl + 10

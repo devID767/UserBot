@@ -52,7 +52,6 @@ class Eat:
             elif text.lower() == "покормить жабу":
                 await asyncio.sleep(43210) #43200
 
-
 class Customise:
     def __init__(self, text, time, typeOfTime, chat):
         self.text = text
@@ -64,6 +63,7 @@ class Customise:
         self._task = None
 
         self.title = f"{text} : {time} : {typeOfTime}\n"
+
     async def Start(self, message):
         if not self.is_started:
             self.is_started = True
@@ -78,5 +78,5 @@ class Customise:
         while True:
             msg = await message.reply_text(self.text, quote=False)
             if msg.text.lower() in Data.Triggers.keys():
-                await message.reply_text(Data.Triggers[msg.text.lower()].text, quote=True)
+                await message.reply_text(Data.Triggers[msg.text.lower()].get('text'), quote=True)
             await asyncio.sleep(self.time)
