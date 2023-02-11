@@ -1,19 +1,17 @@
 import asyncio
+import Config
 
 from pyrogram import Client, filters
 
 import Sending
 import Data
 
-app = Client("my_account")
-#app = Client("anya")
-#app = Client("pasha")
+app = Client("my_account", Config.api_id, Config.api_hash)
 
 @app.on_message(filters.me & filters.command("help", prefixes="."))
 async def Help(client, message):
     await message.delete()
     await message.reply_text(".status\n"
-                       ".delete [message]\n"
                        ".eat [name of command/stop]\n"
                        ".work [name of command/stop]\n"
                        ".timer [num/stop/show] [sec/ minutes/ hours/ days]\n"
@@ -54,7 +52,7 @@ async def TriggerCommand(client, message):
     command = message.text.split(".trigger ", maxsplit=1)[1]
 
     if command == "delete":
-        RepeatMessage = await app.get_messages(message.chat.id, reply_to_message_ids=message.message_id)
+        RepeatMessage = await app.get_messages(message.chat.id, reply_to_message_ids=message.id)
         if Data.Triggers[RepeatMessage.text.lower()].get('chat') == message.chat.id:
             await message.reply_text(f'Триггер "{RepeatMessage.text}" : "{Data.Triggers[RepeatMessage.text.lower()].get("text")}" удален!')
             del Data.Triggers[RepeatMessage.text.lower()]
@@ -76,13 +74,13 @@ async def TriggerCommand(client, message):
     elif command == "all":
         printed = ""
         for triggers in Data.Triggers:
-            printed += f"{triggers} : {Data.Triggers[triggers].get('text')} \n{Data.Triggers[triggers].get('chat')}\n"
+            printed += f"{triggers} : {Data.Triggers[triggers].get('text')} \nchat: {Data.Triggers[triggers].get('chat')}\n"
         if printed == "":
             await message.reply_text("Триггеров нет")
         else:
             await message.reply_text(printed)
     else:
-        RepeatMessage = await app.get_messages(message.chat.id, reply_to_message_ids=message.message_id)
+        RepeatMessage = await app.get_messages(message.chat.id, reply_to_message_ids=message.id)
 
         if '.test' in RepeatMessage.text:
             RepeatMessage.text = RepeatMessage.text.split(maxsplit=1)[1]
@@ -109,7 +107,7 @@ async def TriggerCommand(client, message):
 @app.on_message(filters.command("timer", prefixes=".") & filters.me)
 async def TimerCommand(client, message):
     command = message.text.split(maxsplit=2)[1]
-    RepeatMessage = await app.get_messages(message.chat.id, reply_to_message_ids=message.message_id)
+    RepeatMessage = await app.get_messages(message.chat.id, reply_to_message_ids=message.id)
 
     if command == "start":
         for timerstate in Data.TimersState:
@@ -194,14 +192,6 @@ async def TimerCommand(client, message):
 
     await message.delete()
 
-@app.on_message(filters.command("delete", prefixes=".") & filters.me)
-def DeleteMessages(client, message):
-    enteredText = message.text.split(".delete ", maxsplit=1)[1]
-    message.delete()
-    for msg in app.iter_history(message.chat.id, limit=100):
-        if msg.text == enteredText:
-            app.delete_messages(message.chat.id, msg.message_id, True)
-
 @app.on_message(filters.command("eat", prefixes=".") & filters.me)
 async def EatCommand(client, message):
     command = message.text.split(".eat ", maxsplit=1)[1]
@@ -272,7 +262,7 @@ async def Duel(client, message):
     if message.text.lower() == "дуэль принять":
         Data.DuelCount[message.chat.id] -= 1
 
-        Oldmessage = await app.get_messages(message.chat.id, reply_to_message_ids=message.message_id)
+        Oldmessage = await app.get_messages(message.chat.id, reply_to_message_ids=message.id)
         if Oldmessage.from_user.is_self and Data.CanDuel:
             await asyncio.sleep(10)
             if Data.DuelCount[message.chat.id] <= 0:
